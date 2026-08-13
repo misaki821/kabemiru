@@ -308,7 +308,7 @@ const STARTER_DATA = {
           id: 'f1', type: 'outlet',
           x: 294, h: 2000, hBase: 'fl',
           gangs: 2, attrs: { earth: true, dedicated: true, voltage: 100 },
-          label: '冷蔵庫用コンセント(E付)',
+          label: '冷蔵庫用コンセント(アース付)',
           heightSource: 'default', confidence: 'check',
           labelOffset: { dx: 100, dy: -70 },
         },

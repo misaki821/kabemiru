@@ -38,10 +38,10 @@
   <header class="app-header">
     <h1 class="brand">カベミル</h1>
     <select id="wall-list" title="編集する壁を選ぶ"></select>
-    <button type="button" id="btn-add-wall" class="btn-ghost">＋壁を追加</button>
+    <button type="button" id="btn-add-wall" class="btn-ghost" title="別の部屋・別の面の壁を新しく作ります">＋壁を追加</button>
     <span class="spacer"></span>
-    <span class="save-state" id="save-state">✓ 保存済み</span>
-    <button type="button" id="btn-help" class="btn-ghost">？ 使い方</button>
+    <span class="save-state" id="save-state" title="入力内容はこのブラウザの中に自動保存されます">✓ 保存済み</span>
+    <button type="button" id="btn-help" class="btn-ghost" title="使い方の説明を開きます">？ 使い方</button>
   </header>
 
   <main class="app-main">
@@ -49,14 +49,14 @@
     <!-- ① 置くもの / 壁のサイズ -->
     <section class="pane pane-left">
       <h2>置くもの</h2>
-      <select id="palette-opening" class="palette-select">
+      <select id="palette-opening" class="palette-select" title="種類を選んでから、図の置きたい場所をクリックします">
         <option value="">窓・ドアを選ぶ…</option>
       </select>
-      <button type="button" class="palette-btn" data-place="outlet">コンセント</button>
-      <button type="button" class="palette-btn" data-place="switch">スイッチ</button>
-      <button type="button" class="palette-btn" data-place="light">照明</button>
-      <button type="button" class="palette-btn" data-place="furniture">家具・棚の枠</button>
-      <button type="button" class="palette-btn" id="btn-add-note">メモを追加</button>
+      <button type="button" class="palette-btn" data-place="outlet" title="押してから図をクリックすると、コンセントを置けます">コンセント</button>
+      <button type="button" class="palette-btn" data-place="switch" title="押してから図をクリックすると、スイッチを置けます">スイッチ</button>
+      <button type="button" class="palette-btn" data-place="light" title="押してから図をクリックすると、照明を置けます">照明</button>
+      <button type="button" class="palette-btn" data-place="furniture" title="押してから図をクリックすると、家具・棚の大きさの枠を置けます">家具・棚の枠</button>
+      <button type="button" class="palette-btn" id="btn-add-note" title="図の下に文字のメモを追加します(図の中の位置は持ちません)">メモを追加</button>
       <p class="hint" id="place-hint">ボタンを押してから、中央の図をクリックすると置けます。</p>
 
       <h2>壁のサイズ</h2>
@@ -106,12 +106,12 @@
 
   <!-- ================= ツールバー ================= -->
   <div class="toolbar">
-    <button type="button" id="btn-undo" class="btn">↩ 元に戻す</button>
-    <button type="button" id="btn-png" class="btn btn-primary">画像で保存(PNG)</button>
-    <button type="button" id="btn-svg" class="btn">図のファイルで保存(SVG)</button>
+    <button type="button" id="btn-undo" class="btn" title="直前の操作を1つ取り消します">↩ 元に戻す</button>
+    <button type="button" id="btn-png" class="btn btn-primary" title="いま表示している壁を画像(PNG)にして保存します。打ち合わせに持って行く用">画像で保存(PNG)</button>
+    <button type="button" id="btn-svg" class="btn" title="拡大しても粗くならない図のファイル(SVG)で保存します">図のファイルで保存(SVG)</button>
     <span class="toolbar-sep"></span>
-    <button type="button" id="btn-save-json" class="btn">データを保存</button>
-    <button type="button" id="btn-open-json" class="btn">データを開く</button>
+    <button type="button" id="btn-save-json" class="btn" title="作業内容をファイルに保存します(バックアップ用)。画像ではありません">データを保存</button>
+    <button type="button" id="btn-open-json" class="btn" title="「データを保存」で作ったファイルを読み込んで、続きから編集します">データを開く</button>
     <span class="toolbar-note">入力内容はこのブラウザの中に自動保存されます(運営者には送られません)。</span>
   </div>
 

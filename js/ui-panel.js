@@ -206,6 +206,9 @@ function makeConfidence() {
   const box = document.createElement('div');
   box.innerHTML = '<label class="field field-check"><input type="checkbox" data-field="confidence">'
     + '<span>⚠ 要営業確認にする<small>図の中で赤く表示されます</small></span></label>'
+    // 「なぜ赤いのか」が分からず戸惑う人が多いので、要営業確認のときだけ理由を1行出す(fillで出し入れ)
+    + '<p class="hint conf-hint" data-conf-hint hidden>置いたばかりの部品は安全のため赤(要確認)で始まります。'
+    + '高さプリセットを選ぶか、チェックを外すと黒になります。</p>'
     + '<p class="badge-line" data-badge>—</p>';
   const input = box.querySelector('input');
   input.addEventListener('change', () => {
@@ -331,6 +334,10 @@ function fill(key, target) {
     badge.innerHTML = `確度: <span class="badge${conf.warn ? ' warn' : ''}">`
       + `${conf.warn ? '⚠ ' : ''}${conf.label}</span>`;
   }
+
+  // 「赤で始まる」理由の1行は、要営業確認のときだけ出す
+  const confHint = el.fields.querySelector('[data-conf-hint]');
+  if (confHint) confHint.hidden = target.confidence !== 'check';
 }
 
 /* --------------------------------------------------------------------------

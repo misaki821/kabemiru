@@ -31,8 +31,20 @@ const el = {
   intro: $('intro-dialog'), help: $('help-dialog'),
 };
 
+/**
+ * アクセス解析(GA4)に「どの機能が使われたか」だけを送る。
+ * 送るのはイベント名だけ。図の中身・座標・メモなど利用者が入力したデータは一切送らない(設計書8章の方針)。
+ * gtagタグが読み込めていない環境(広告ブロック等)でも動くよう、存在確認をしてから呼ぶ。
+ */
+function track(name) {
+  if (typeof gtag === 'function') gtag('event', name);
+}
+
 /** いま選んでいる「置くもの」。null なら配置モードではない */
 let placing = null;   // 例 { kind:'fixtures', type:'outlet' } / { kind:'openings', openingKind:'window' }
+
+/** 壁の外をクリックしたときの案内を元に戻すためのタイマー */
+let hintTimer = 0;
 
 /** 数値欄を編集中に「元に戻す」用のコピーを取ったか(1回の編集=1回分にまとめる) */
 let snapshotTaken = false;
@@ -178,7 +190,11 @@ function bindEvents() {
   // --- ダイアログ ---
   $('btn-help').addEventListener('click', () => el.help.showModal());
   $('btn-show-intro').addEventListener('click', () => { el.help.close(); el.intro.showModal(); });
-  el.intro.addEventListener('close', () => state.setAgreed());
+  el.intro.addEventListener('close', () => {
+    // 初回の「同意して使いはじめる」だけを数える(2回目以降の読み直しは数えない)
+    if (!state.hasAgreed()) track('consent_start');
+    state.setAgreed();
+  });
 
   // --- ② 図の上の操作 ---
   el.canvas.addEventListener('pointerdown', onCanvasPointerDown);
@@ -208,9 +224,27 @@ function setPlacing(next) {
   });
   if (!next || next.kind !== 'openings') el.paletteOpening.value = '';
   el.canvasPane.classList.toggle('placing', !!next);
-  el.placeHint.textContent = next
+  clearTimeout(hintTimer);                       // 出しかけの案内があれば取り消す
+  el.placeHint.classList.remove('hint-warn');
+  updatePlaceHint();
+}
+
+/** ヒント欄の文言を、いまの配置モードに合ったものに戻す */
+function updatePlaceHint() {
+  el.placeHint.textContent = placing
     ? '図の中の置きたい位置をクリックしてください(もう一度ボタンを押すと取り消し)'
     : 'ボタンを押してから、中央の図をクリックすると置けます。';
+}
+
+/** ヒント欄に注意色で一時的なお知らせを出す(3秒後に元の文言に戻す) */
+function flashHint(text) {
+  clearTimeout(hintTimer);
+  el.placeHint.textContent = text;
+  el.placeHint.classList.add('hint-warn');
+  hintTimer = setTimeout(() => {
+    el.placeHint.classList.remove('hint-warn');
+    updatePlaceHint();
+  }, 3000);
 }
 
 function onCanvasPointerDown(e) {
@@ -243,7 +277,11 @@ function onCanvasPointerDown(e) {
  */
 function placeElement(mm) {
   const wall = state.getWall();
-  if (mm.x < 0 || mm.x > wall.width || mm.h < 0 || mm.h > wall.height) return;   // 壁の外は無視
+  // 壁の外(図の余白)は置けないので、配置モードのまま案内だけ出す
+  if (mm.x < 0 || mm.x > wall.width || mm.h < 0 || mm.h > wall.height) {
+    flashHint('壁の白い四角の中をクリックしてください');
+    return;
+  }
   const x = snap(mm.x);
   const kind = placing.kind;
   const id = state.nextId(kind === 'fixtures' ? 'f' : (kind === 'openings' ? 'op' : 'fur'));
@@ -256,6 +294,7 @@ function placeElement(mm) {
   });
   state.setSelectedId(id);
   setPlacing(null);
+  track('part_place');
 }
 
 /** メモを追加する(位置を持たないので図の下部に並ぶ・設計書3-1) */
@@ -266,6 +305,7 @@ function addNote() {
   });
   state.setSelectedId(id);
   setPlacing(null);
+  track('part_place');
   // 右パネルのメモ欄にすぐ書けるようにする
   const box = el.fields.querySelector('textarea');
   if (box) { box.focus(); box.select(); }
@@ -443,6 +483,7 @@ async function savePng() {
   btn.disabled = true;
   try {
     await exportPng(exportSvgText(), buildFileName(state.getWall(), 'png'));
+    track('export_png');
   } catch (err) {
     alert('画像の保存に失敗しました。もう一度お試しください。\n' + err.message);
   } finally {
@@ -453,11 +494,13 @@ async function savePng() {
 
 function saveSvg() {
   exportSvg(exportSvgText(), buildFileName(state.getWall(), 'svg'));
+  track('export_svg');
   renderAll();
 }
 
 function saveJson() {
   exportJson(state.getData(), buildDataFileName());
+  track('save_json');
 }
 
 /** データファイル(JSON)を開く */
@@ -468,7 +511,7 @@ async function openJson(e) {
     const incoming = await readJsonFile(file);
     const error = state.replaceData(incoming);
     if (error) alert(error + '\n\nカベミルの「データを保存」で作ったファイルを選んでください。');
-    else setPlacing(null);
+    else { setPlacing(null); track('load_json'); }
   } catch (err) {
     alert(err.message);
   }
@@ -488,7 +531,9 @@ function setupBridge() {
   $('bridge-line').href = `https://line.me/R/msg/text/?${encodeURIComponent(text)}`;
   $('bridge-mail').href = `mailto:?subject=${encodeURIComponent('カベミル(壁面図エディタ)')}`
     + `&body=${encodeURIComponent(`パソコンでこのURLを開いてください:\n${url}`)}`;
+  $('bridge-line').addEventListener('click', () => track('bridge_line'));
   $('bridge-copy').addEventListener('click', async () => {
+    track('bridge_copy');
     try {
       await navigator.clipboard.writeText(url);
       $('bridge-copied').hidden = false;

@@ -4,13 +4,15 @@
    ========================================================================== */
 
 :root {
-  --line: #d6d8dc;          /* 罫線のグレー */
-  --bg: #f5f6f8;            /* 画面全体の背景 */
+  --line: #d9d5cf;          /* 罫線のグレー(すこし暖色寄り) */
+  --bg: #f7f5f2;            /* 画面全体の背景(ごく薄い暖色。パネルと図は白のまま) */
   --text: #222;
   --sub: #666;              /* 補足文字の色 */
   --accent: #1a6fb5;        /* ボタンなどのアクセント色 */
+  --accent-soft: #eaf2fa;   /* アクセント色のごく薄い版(帯・下線などの彩り用) */
   --warn: #cc0000;          /* 要営業確認の赤 */
   --select: #ff8c00;        /* 選択中のハイライト(オレンジ) */
+  --card-shadow: 0 1px 3px rgba(60, 50, 40, 0.06);   /* パネルを「カード」に見せる軽い影 */
 }
 
 * { box-sizing: border-box; }
@@ -32,15 +34,10 @@ body {
   align-items: center;
   gap: 12px;
   padding: 8px 14px;
-  background: #fff;
-  border-bottom: 1px solid var(--line);
+  background: var(--accent-soft);           /* ごく薄いアクセント色の帯 */
+  border-bottom: 2px solid var(--accent);   /* アクセント色の下線で画面上部に彩りを付ける */
 }
-.brand { font-size: 18px; font-weight: bold; letter-spacing: 0.05em; margin: 0; }
-.wall-name { font-size: 14px; color: var(--sub); }
-.prototype-tag {
-  font-size: 11px; color: var(--sub);
-  border: 1px solid var(--line); border-radius: 10px; padding: 1px 8px;
-}
+.brand { font-size: 18px; font-weight: bold; letter-spacing: 0.05em; margin: 0; color: var(--accent); }
 .spacer { flex: 1; }
 .save-state { font-size: 12px; color: #2a7d2a; }
 .save-state.saving { color: var(--sub); }
@@ -59,6 +56,7 @@ body {
   border: 1px solid var(--line);
   border-radius: 6px;
   padding: 10px;
+  box-shadow: var(--card-shadow);   /* 暖色の背景の上で「白いカード」に見せる */
 }
 .pane h2 {
   font-size: 13px;
@@ -70,6 +68,9 @@ body {
 #canvas-area svg { width: 100%; height: auto; display: block; }
 /* 「置くもの」を選んでいるあいだは、図の上のカーソルを十字にする */
 .pane-canvas.placing #canvas-area svg { cursor: crosshair; }
+/* 図の中のクリックできる部品は指のカーソルにする。
+   ドラッグで動かせる部品には render.js 側が cursor:move を直接指定しており、そちらが優先される */
+#canvas-area [data-id] { cursor: pointer; }
 
 /* ---------- 入力欄 ---------- */
 .field { display: block; margin-bottom: 8px; }
@@ -91,8 +92,10 @@ body {
 .field-check input { margin-top: 3px; }
 
 .hint { font-size: 11px; color: var(--sub); line-height: 1.5; margin: 6px 0; }
-.note-todo { font-size: 11px; color: #999; line-height: 1.5; margin: 10px 0 0; }
-.panel-kind { font-weight: bold; margin: 0 0 8px; }
+/* 壁の外をクリックしたときなど、一時的に注意を促すヒント(ui.jsが3秒だけ付ける) */
+.hint.hint-warn { color: var(--warn); font-weight: bold; }
+/* 「要営業確認」のときだけ右パネルに出す、赤で始まる理由の1行(ui-panel.js) */
+.conf-hint { margin: 4px 0 0; }
 
 /* ---------- ボタン ---------- */
 .btn, .btn-ghost, .palette-btn, .btn-danger {
@@ -103,10 +106,17 @@ body {
 }
 .btn { padding: 6px 14px; border: 1px solid var(--line); background: #fff; }
 .btn:hover { background: #f0f3f6; }
-.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+/* 一番使ってほしいボタン(画像で保存)。塗りつぶし+太字で目立たせる */
+.btn-primary {
+  background: var(--accent); border-color: var(--accent); color: #fff;
+  font-weight: bold; box-shadow: var(--card-shadow);
+}
 .btn-primary:hover { background: #15598f; }
 .btn-ghost { padding: 4px 10px; border: 1px solid var(--line); background: #fff; }
 .btn:disabled { opacity: 0.45; cursor: default; }
+
+/* キーボード(Tabキー)で操作したときに、いまどこにいるかが分かるようにする */
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 .palette-btn {
   display: block; width: 100%;
@@ -141,11 +151,16 @@ body {
 .badge.warn { background: #fbe9e9; color: var(--warn); font-weight: bold; }
 
 /* ---------- ツールバー・フッター ---------- */
+/* 図が縦に長くなっても保存ボタンが隠れないよう、画面の下に貼り付けておく(sticky) */
 .toolbar {
   display: flex; align-items: center; gap: 10px;
   padding: 8px 14px;
   background: #fff;
   border-top: 1px solid var(--line);
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  box-shadow: 0 -2px 6px rgba(60, 50, 40, 0.10);   /* 図と重なったときに境目が分かるように */
 }
 .toolbar-note { font-size: 11px; color: var(--sub); }
 .toolbar-sep { width: 1px; height: 22px; background: var(--line); }
@@ -153,7 +168,7 @@ body {
 .app-footer {
   padding: 8px 14px 14px;
   font-size: 11px; color: var(--sub); line-height: 1.6;
-  background: #fff;
+  background: transparent;   /* 画面全体の背景色(薄い暖色)をそのまま見せる */
 }
 .app-footer p { margin: 2px 0; }
 .app-footer .tm { color: #999; }
