@@ -1,0 +1,211 @@
+/* ==========================================================================
+   カベミル — 画面の見た目
+   レイアウトは「ヘッダー / 3カラム本体 / ツールバー / フッター」の縦積み。
+   ========================================================================== */
+
+:root {
+  --line: #d6d8dc;          /* 罫線のグレー */
+  --bg: #f5f6f8;            /* 画面全体の背景 */
+  --text: #222;
+  --sub: #666;              /* 補足文字の色 */
+  --accent: #1a6fb5;        /* ボタンなどのアクセント色 */
+  --warn: #cc0000;          /* 要営業確認の赤 */
+  --select: #ff8c00;        /* 選択中のハイライト(オレンジ) */
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: "Meiryo", "Yu Gothic", "Hiragino Kaku Gothic ProN", sans-serif;
+  font-size: 14px;
+  color: var(--text);
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* ---------- ヘッダー ---------- */
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px;
+  background: #fff;
+  border-bottom: 1px solid var(--line);
+}
+.brand { font-size: 18px; font-weight: bold; letter-spacing: 0.05em; }
+.wall-name { font-size: 14px; color: var(--sub); }
+.prototype-tag {
+  font-size: 11px; color: var(--sub);
+  border: 1px solid var(--line); border-radius: 10px; padding: 1px 8px;
+}
+.spacer { flex: 1; }
+.save-state { font-size: 12px; color: #2a7d2a; }
+.save-state.saving { color: var(--sub); }
+
+/* ---------- 本体3カラム ---------- */
+.app-main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 210px 1fr 260px;
+  gap: 10px;
+  padding: 10px;
+  align-items: start;
+}
+.pane {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 10px;
+}
+.pane h2 {
+  font-size: 13px;
+  margin: 4px 0 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--line);
+}
+.pane-canvas { padding: 6px; min-width: 0; }   /* min-width:0 で図の元の大きさに引っぱられないようにする */
+#canvas-area svg { width: 100%; height: auto; display: block; }
+/* 「置くもの」を選んでいるあいだは、図の上のカーソルを十字にする */
+.pane-canvas.placing #canvas-area svg { cursor: crosshair; }
+
+/* ---------- 入力欄 ---------- */
+.field { display: block; margin-bottom: 8px; }
+.field > span { display: block; font-size: 12px; color: var(--sub); margin-bottom: 2px; }
+.field > span small { color: #999; font-size: 11px; margin-left: 4px; }
+.field input[type="number"],
+.field input[type="text"],
+.field textarea,
+.field select {
+  width: 100%;
+  padding: 5px 6px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: inherit;
+}
+.field-check { display: flex; align-items: flex-start; gap: 6px; }
+.field-check > span { margin: 0; font-size: 13px; color: var(--text); }
+.field-check input { margin-top: 3px; }
+
+.hint { font-size: 11px; color: var(--sub); line-height: 1.5; margin: 6px 0; }
+.note-todo { font-size: 11px; color: #999; line-height: 1.5; margin: 10px 0 0; }
+.panel-kind { font-weight: bold; margin: 0 0 8px; }
+
+/* ---------- ボタン ---------- */
+.btn, .btn-ghost, .palette-btn, .btn-danger {
+  font-family: inherit;
+  font-size: 13px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.btn { padding: 6px 14px; border: 1px solid var(--line); background: #fff; }
+.btn:hover { background: #f0f3f6; }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn-primary:hover { background: #15598f; }
+.btn-ghost { padding: 4px 10px; border: 1px solid var(--line); background: #fff; }
+.btn:disabled { opacity: 0.45; cursor: default; }
+
+.palette-btn {
+  display: block; width: 100%;
+  padding: 8px; margin-bottom: 4px;
+  border: 1px solid var(--line); background: #fff; text-align: left;
+}
+.palette-btn:hover { background: #f0f3f6; }
+/* 配置モード中(押されている状態) */
+.palette-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* パレットの「窓・ドアを選ぶ」ドロップダウン */
+.palette-select {
+  width: 100%; padding: 7px 6px; margin-bottom: 4px;
+  border: 1px solid var(--line); border-radius: 4px;
+  font-size: 13px; font-family: inherit; background: #fff;
+}
+
+.btn-danger, .btn-sub {
+  width: 100%; padding: 7px; margin-top: 6px;
+  border: 1px solid var(--line); background: #fff;
+}
+.btn-danger { border-color: #e0b4b4; color: var(--warn); }
+.btn-danger:hover { background: #fdf0f0; }
+.btn-sub:hover { background: #f0f3f6; }
+
+/* ---------- 確度ラベルのバッジ ---------- */
+.badge-line { margin: 8px 0 0; font-size: 12px; }
+.badge {
+  display: inline-block; padding: 1px 7px; border-radius: 9px;
+  background: #eceef1; color: #555; font-size: 11px;
+}
+.badge.warn { background: #fbe9e9; color: var(--warn); font-weight: bold; }
+
+/* ---------- ツールバー・フッター ---------- */
+.toolbar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 14px;
+  background: #fff;
+  border-top: 1px solid var(--line);
+}
+.toolbar-note { font-size: 11px; color: var(--sub); }
+.toolbar-sep { width: 1px; height: 22px; background: var(--line); }
+
+.app-footer {
+  padding: 8px 14px 14px;
+  font-size: 11px; color: var(--sub); line-height: 1.6;
+  background: #fff;
+}
+.app-footer p { margin: 2px 0; }
+.app-footer .tm { color: #999; }
+.app-footer a { color: var(--accent); }         /* 免責・プライバシーポリシーへのリンク */
+
+/* ---------- 初回免責ダイアログ ---------- */
+dialog.intro {
+  max-width: 620px; padding: 22px 26px;
+  border: 1px solid var(--line); border-radius: 8px;
+  line-height: 1.7;
+}
+dialog.intro::backdrop { background: rgba(0, 0, 0, 0.45); }
+dialog.intro h2 { margin: 0 0 12px; font-size: 18px; }
+dialog.intro ul { padding-left: 1.2em; }
+dialog.intro li { margin-bottom: 6px; }
+dialog.intro form { text-align: center; margin-top: 16px; }
+dialog.intro form button { padding: 9px 24px; font-size: 15px; }
+dialog.intro ol { padding-left: 1.3em; }
+dialog.intro ol li { margin-bottom: 8px; }
+.help-caution {
+  background: #fff8e5; border: 1px solid #ecd9a0; border-radius: 4px;
+  padding: 8px 10px; font-size: 13px;
+}
+.help-buttons { display: flex; gap: 10px; justify-content: center; }
+/* ダイアログ内から免責・プライバシーポリシーのページへ */
+.dialog-policy { margin: 12px 0 0; font-size: 13px; }
+.dialog-policy a { color: var(--accent); }
+
+/* ---------- スマホ橋渡し画面(設計書3-4) ---------- */
+/* ふだんは隠しておき、画面が狭いときだけ編集画面と入れ替える */
+/* min-width:0 が無いと、中の図(SVG)の元の大きさ(1200px)に画面が引っぱられてはみ出す */
+#mobile-bridge { display: none; min-width: 0; }
+#bridge-preview { min-width: 0; }
+
+#mobile-bridge h1 { font-size: 26px; margin: 0 0 4px; letter-spacing: 0.05em; }
+#mobile-bridge .tagline { margin: 0 0 14px; font-size: 13px; color: var(--sub); }
+#bridge-preview { border: 1px solid var(--line); border-radius: 4px; overflow: hidden; background: #fff; }
+#bridge-preview svg { width: 100%; height: auto; display: block; }
+.bridge-list { padding-left: 1.2em; font-size: 14px; line-height: 1.8; }
+.bridge-note { font-size: 14px; line-height: 1.7; }
+.bridge-buttons { display: grid; gap: 8px; margin: 16px 0; }
+.bridge-buttons .btn { padding: 12px; text-align: center; text-decoration: none; font-size: 15px; }
+.bridge-copied { color: #2a7d2a; font-size: 13px; }
+.bridge-policy { font-size: 14px; margin: 18px 0 0; }
+.bridge-policy a { color: var(--accent); }
+
+@media (max-width: 767px) {
+  #app { display: none; }
+  #mobile-bridge { display: block; padding: 16px; background: #fff; min-height: 100vh; }
+}
+
+/* PCでも横幅が足りないときは3カラムをやめて縦に並べる */
+@media (min-width: 768px) and (max-width: 1100px) {
+  .app-main { grid-template-columns: 190px 1fr 230px; }
+}

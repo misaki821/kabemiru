@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>カベミル — 壁とコンセントの位置がミルミルわかる無料展開図エディタ</title>
+<link rel="stylesheet" href="style.css">
+
+<!-- ▼▼ Googleアナリティクス(GA4)タグのひな形 ここから ▼▼
+     ・公開するときに G-XXXXXXXXXX を実際の測定ID(Googleアナリティクスの管理画面で
+       発行される「G」で始まる文字列)に置き換えてください。
+     ・そのうえで、この下のブロックを囲んでいるコメント記号(この行の上と、
+       「ここまで」の行)を削除すると、アクセス解析が有効になります。
+     ・index.html と policy.html の2ファイルとも、必ず同じ測定IDにしてください。
+     ・コメントのままの間は、外部(Google)への通信はいっさい発生しません。
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){ dataLayer.push(arguments); }
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXXXXX');
+</script>
+
+     ▲▲ Googleアナリティクス(GA4)タグのひな形 ここまで ▲▲ -->
+</head>
+<body>
+
+<!-- ================= 編集画面(PC向け) ================= -->
+<div id="app">
+
+  <header class="app-header">
+    <span class="brand">カベミル</span>
+    <select id="wall-list" title="編集する壁を選ぶ"></select>
+    <button type="button" id="btn-add-wall" class="btn-ghost">＋壁を追加</button>
+    <span class="spacer"></span>
+    <span class="save-state" id="save-state">✓ 保存済み</span>
+    <button type="button" id="btn-help" class="btn-ghost">？ 使い方</button>
+  </header>
+
+  <main class="app-main">
+
+    <!-- ① 置くもの / 壁のサイズ -->
+    <section class="pane pane-left">
+      <h2>置くもの</h2>
+      <select id="palette-opening" class="palette-select">
+        <option value="">窓・ドアを選ぶ…</option>
+      </select>
+      <button type="button" class="palette-btn" data-place="outlet">コンセント</button>
+      <button type="button" class="palette-btn" data-place="switch">スイッチ</button>
+      <button type="button" class="palette-btn" data-place="light">照明</button>
+      <button type="button" class="palette-btn" data-place="furniture">家具・棚の枠</button>
+      <button type="button" class="palette-btn" id="btn-add-note">メモを追加</button>
+      <p class="hint" id="place-hint">ボタンを押してから、中央の図をクリックすると置けます。</p>
+
+      <h2>壁のサイズ</h2>
+      <label class="field">
+        <span>幅(マス)<small>1マス=91cm</small></span>
+        <select id="wall-masu"></select>
+      </label>
+      <label class="field">
+        <span>幅(mm)</span>
+        <input type="number" id="wall-width" min="500" max="20000" step="1">
+      </label>
+      <p class="hint" id="wall-width-hint">—</p>
+
+      <label class="field">
+        <span>天井の高さ</span>
+        <select id="wall-ceiling"></select>
+      </label>
+      <label class="field">
+        <span>高さ(mm)</span>
+        <input type="number" id="wall-height" min="1000" max="5000" step="1">
+      </label>
+    </section>
+
+    <!-- ② 壁のプレビュー(SVG) -->
+    <section class="pane pane-canvas">
+      <div id="canvas-area"></div>
+    </section>
+
+    <!-- ③ 選んだものの設定(入力欄は ui-panel.js が作る) -->
+    <section class="pane pane-right">
+      <h2 id="panel-title">壁全体の設定</h2>
+      <div id="panel-fields"></div>
+
+      <div id="panel-wall-extra">
+        <label class="field">
+          <span>壁の厚さ(mm)<small>マスからの計算に使用</small></span>
+          <input type="number" id="wall-thickness" min="0" max="500" step="1">
+        </label>
+        <p class="hint">図の中の部品をクリックすると、ここで数値を直せます。</p>
+        <button type="button" id="btn-duplicate-wall" class="btn-sub">この壁を複製</button>
+        <button type="button" id="btn-delete-wall" class="btn-danger">この壁を削除</button>
+      </div>
+
+      <button type="button" id="btn-delete" class="btn-danger" hidden>この部品を削除</button>
+    </section>
+  </main>
+
+  <!-- ================= ツールバー ================= -->
+  <div class="toolbar">
+    <button type="button" id="btn-undo" class="btn">↩ 元に戻す</button>
+    <button type="button" id="btn-png" class="btn btn-primary">画像で保存(PNG)</button>
+    <button type="button" id="btn-svg" class="btn">図のファイルで保存(SVG)</button>
+    <span class="toolbar-sep"></span>
+    <button type="button" id="btn-save-json" class="btn">データを保存</button>
+    <button type="button" id="btn-open-json" class="btn">データを開く</button>
+    <span class="toolbar-note">入力内容はこのブラウザの中に自動保存されます(運営者には送られません)。</span>
+  </div>
+
+  <!-- ================= フッター免責(設計書8-1) ================= -->
+  <footer class="app-footer">
+    <p>カベミル(個人運営・非公式)|本ツールで作る図は検討用の概略図です。正式な寸法・仕様は図面・担当者確認を優先してください。
+      |<a href="policy.html" target="_blank" rel="noopener">免責事項・プライバシーポリシー</a></p>
+    <p class="tm">記載の会社名・商品名(一条工務店、HUGme 等)は各社の商標または登録商標です。カベミルはこれらの企業とは関係のない非公式ツールです。</p>
+  </footer>
+</div>
+
+<!-- ================= スマホ橋渡し画面(設計書3-4) ================= -->
+<div id="mobile-bridge">
+  <h1>カベミル</h1>
+  <p class="tagline">壁とコンセントの位置がミルミルわかる、無料の壁面図エディタ</p>
+  <div id="bridge-preview" aria-label="完成例の図"></div>
+  <ul class="bridge-list">
+    <li>部屋の壁を正面から見た図を、マス(1マス=91cm)で作れます</li>
+    <li>コンセント・スイッチ・照明を、床からの高さ付きで書き込めます</li>
+    <li>打ち合わせに持って行ける画像(PNG)で保存できます</li>
+  </ul>
+  <p class="bridge-note">編集画面はパソコン向けです。<strong>パソコンでのご利用をおすすめします。</strong><br>
+    下のボタンでこのページのURLを自分に送っておくと、あとからパソコンで開けます。</p>
+  <div class="bridge-buttons">
+    <a id="bridge-line" class="btn btn-primary" href="#">LINEで自分に送る</a>
+    <a id="bridge-mail" class="btn" href="#">メールで送る</a>
+    <button type="button" id="bridge-copy" class="btn">URLをコピー</button>
+  </div>
+  <p class="bridge-copied" id="bridge-copied" hidden>URLをコピーしました。</p>
+  <p class="bridge-policy"><a href="policy.html" target="_blank" rel="noopener">免責事項・プライバシーポリシー</a></p>
+  <footer class="app-footer">
+    <p>カベミル(個人運営・非公式)|本ツールで作る図は検討用の概略図です。正式な寸法・仕様は図面・担当者確認を優先してください。</p>
+    <p class="tm">記載の会社名・商品名(一条工務店、HUGme 等)は各社の商標または登録商標です。カベミルはこれらの企業とは関係のない非公式ツールです。</p>
+  </footer>
+</div>
+
+<!-- ================= 初回のみ表示する免責ダイアログ(設計書8-2) ================= -->
+<dialog id="intro-dialog" class="intro">
+  <h2>ご利用の前に</h2>
+  <p>カベミルで作成する壁面図は、家づくりの検討・打ち合わせ準備のための<strong>概略図(ざっくりした目安の図)</strong>です。</p>
+  <ul>
+    <li>収録している寸法・記号は目安です。各データには確度ラベル(実測/公式/一般値/要営業確認)を表示していますが、いずれも正確さを保証するものではありません。</li>
+    <li><strong>正式な位置・寸法・仕様の決定は、必ず住宅会社の図面と担当者への確認で行ってください。</strong></li>
+    <li>本ツールは施主個人が運営する非公式ツールで、特定の住宅会社とは関係ありません。</li>
+    <li>入力したデータはお使いのブラウザ内にのみ保存され、運営者に送信されません。</li>
+  </ul>
+  <p>本ツールの利用により生じたいかなる損害についても、運営者は責任を負いかねます。上記に同意のうえ、ご利用ください。</p>
+  <p class="dialog-policy"><a href="policy.html" target="_blank" rel="noopener">免責事項・プライバシーポリシーの全文を読む(別のタブで開きます)</a></p>
+  <form method="dialog">
+    <button value="agree" class="btn btn-primary" autofocus>同意して使いはじめる</button>
+  </form>
+</dialog>
+
+<!-- ================= 使い方ダイアログ ================= -->
+<dialog id="help-dialog" class="intro">
+  <h2>カベミルの使い方</h2>
+  <ol>
+    <li><strong>壁の大きさを合わせる</strong> — 左の「壁のサイズ」で幅(マス)と天井の高さを選びます。マスを選ぶと、壁の厚さ(既定120mm)を引いた幅が入ります。</li>
+    <li><strong>置く</strong> — 左の「置くもの」でコンセントなどを選び、図の置きたい場所をクリックします。</li>
+    <li><strong>直す・消す</strong> — 図の中の部品をクリックすると、右側で数値やメモを直せます。ドラッグでも動かせます(10mm刻み)。いらないものは「この部品を削除」。</li>
+    <li><strong>文字の位置をずらす</strong> — 部品を選ぶと、その説明文字のまわりにオレンジの破線の枠が出ます。この枠をドラッグすると<strong>文字だけ</strong>を動かせます(部品の位置は変わりません)。文字は自動で重ならない位置に並びますが、見づらいときにお使いください。</li>
+  </ol>
+  <p>「高さプリセット」を選ぶと、コンセント標準(床から30cm)などの高さが1回で入ります。かっこ内はその数値の確度(実測/公式/一般値/要営業確認)です。</p>
+  <p><strong>置いたばかりの部品は⚠要営業確認(赤)から始まります。</strong>高さプリセットを当てるか、右側のチェックを外すと通常の表示になります。</p>
+  <p class="help-caution">入力内容はお使いのブラウザの中だけに保存されます。ブラウザの履歴を消したりパソコンを買い替えると消えてしまうため、
+    大事なデータは<strong>「データを保存」でファイルにも残して</strong>ください(「データを開く」で戻せます)。</p>
+  <p class="dialog-policy"><a href="policy.html" target="_blank" rel="noopener">免責事項・プライバシーポリシーの全文を読む(別のタブで開きます)</a></p>
+  <form method="dialog" class="help-buttons">
+    <button value="close" class="btn btn-primary" autofocus>閉じる</button>
+    <button type="button" id="btn-show-intro" class="btn">免責事項をもう一度読む</button>
+  </form>
+</dialog>
+
+<!-- データファイルを開くための入力欄(画面には出しません) -->
+<input type="file" id="file-input" accept=".json,application/json" hidden>
+
+<!-- ES Modules。ダブルクリックでは動きません(Live Server などのローカルサーバ経由で開いてください) -->
+<script type="module" src="js/ui.js"></script>
+</body>
+</html>
