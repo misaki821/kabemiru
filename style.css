@@ -35,7 +35,7 @@ body {
   background: #fff;
   border-bottom: 1px solid var(--line);
 }
-.brand { font-size: 18px; font-weight: bold; letter-spacing: 0.05em; }
+.brand { font-size: 18px; font-weight: bold; letter-spacing: 0.05em; margin: 0; }
 .wall-name { font-size: 14px; color: var(--sub); }
 .prototype-tag {
   font-size: 11px; color: var(--sub);
