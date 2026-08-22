@@ -56,6 +56,7 @@
       <button type="button" class="palette-btn" data-place="switch" title="押してから図をクリックすると、スイッチを置けます">スイッチ</button>
       <button type="button" class="palette-btn" data-place="light" title="押してから図をクリックすると、照明を置けます">照明</button>
       <button type="button" class="palette-btn" data-place="furniture" title="押してから図をクリックすると、家具・棚の大きさの枠を置けます">家具・棚の枠</button>
+      <button type="button" class="palette-btn" data-place="backing" title="押してから図をクリックすると、下地(テレビ壁掛けや棚のための壁の中の補強板)の希望範囲を置けます">下地(壁の補強)</button>
       <button type="button" class="palette-btn" id="btn-add-note" title="図の下に文字のメモを追加します(図の中の位置は持ちません)">メモを追加</button>
       <p class="hint" id="place-hint">ボタンを押してから、中央の図をクリックすると置けます。</p>
 
@@ -171,7 +172,7 @@
   <ol>
     <li><strong>壁の大きさを合わせる</strong> — 左の「壁のサイズ」で幅(マス)と天井の高さを選びます。マスを選ぶと、壁の厚さ(既定120mm)を引いた幅が入ります。</li>
     <li><strong>置く</strong> — 左の「置くもの」でコンセントなどを選び、図の置きたい場所をクリックします。</li>
-    <li><strong>直す・消す</strong> — 図の中の部品をクリックすると、右側で数値やメモを直せます。ドラッグでも動かせます(10mm刻み)。いらないものは「この部品を削除」。</li>
+    <li><strong>直す・消す</strong> — 図の中の部品をクリックすると、右側で数値やメモを直せます。ドラッグでも動かせます(10mm刻み)。「家具・棚の枠」と「下地(壁の補強)」は、選ぶと出るつまみをドラッグして大きさも変えられます。いらないものは「この部品を削除」。</li>
     <li><strong>文字の位置をずらす</strong> — 部品を選ぶと、その説明文字のまわりにオレンジの破線の枠が出ます。この枠をドラッグすると<strong>文字だけ</strong>を動かせます(部品の位置は変わりません)。文字は自動で重ならない位置に並びますが、見づらいときにお使いください。</li>
   </ol>
   <p>「高さプリセット」を選ぶと、コンセント標準(床から30cm)などの高さが1回で入ります。かっこ内はその数値の確度(実測/公式/一般値/要営業確認)です。</p>

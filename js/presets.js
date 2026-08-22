@@ -227,6 +227,25 @@ export const ATTR_ALIASES = [
 /** 家具・棚の枠を置くときの初期値 */
 export const FURNITURE_DEFAULT = { width: 900, height: 1800, label: '家具・棚' };
 
+/** 下地(壁の補強)を置くときの初期値。1マス(910mm)角を床から(2026-08-22追加) */
+export const BACKING_DEFAULT = { width: 910, height: 910, label: '下地' };
+
+/**
+ * 下地の高さ帯プリセット(設計書5-2「下地補強の高さ帯」。一条公式の3区分)
+ * top = 床からの上端(mm)。'ceiling' はその壁の天井の高さを使う。
+ * 下端は床(0)に揃える。細かい値は右パネルのmm欄で直す。
+ */
+export const BACKING_BANDS = [
+  { id: 'b910',    name: '床〜910(腰の高さまで)',     top: 910 },
+  { id: 'b1820',   name: '床〜1,820(目線の高さまで)', top: 1820 },
+  { id: 'ceiling', name: '床〜天井(壁いっぱい)',       top: 'ceiling' },
+];
+
+/** 高さ帯プリセットの上端(mm)を、その壁の天井の高さを考慮して返す */
+export function backingBandTop(band, wallHeight) {
+  return band.top === 'ceiling' ? wallHeight : band.top;
+}
+
 /* --------------------------------------------------------------------------
    新しく置く部品の中身を作る(スキーマは設計書4-3)
    置いたばかりのものは confidence="check"(要営業確認・赤)から始める(設計書5-4)
@@ -265,6 +284,19 @@ export function newFurniture(id, centerX, wallWidth) {
   return {
     id, x: Math.round(x), width: def.width, bottom: 0, height: def.height,
     style: 'dashed', label: def.label, confidence: 'check',
+  };
+}
+
+/**
+ * 下地(壁の補強)。床(下端0)に置く。
+ * 下地を入れられるかは構造・配線しだいなので、必ず「要営業確認」から始める。
+ */
+export function newBacking(id, centerX, wallWidth) {
+  const def = BACKING_DEFAULT;
+  const x = Math.min(Math.max(centerX - def.width / 2, 0), Math.max(0, wallWidth - def.width));
+  return {
+    id, x: Math.round(x), width: def.width, bottom: 0, height: def.height,
+    label: def.label, note: '', confidence: 'check',
   };
 }
 
@@ -326,6 +358,7 @@ const STARTER_DATA = {
           style: 'dashed', label: '冷蔵庫 W650×H1,820', confidence: 'check',
         },
       ],
+      backing: [],   // 下地(2026-08-22追加)。サンプル壁には置かない
       notes: [
         { id: 'n1', text: '横方向寸法は図面グリッド実測・要営業確認', level: 'warning' },
       ],

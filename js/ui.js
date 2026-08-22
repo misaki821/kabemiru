@@ -12,7 +12,7 @@ import {
 } from './export.js';
 import { escapeXml } from './symbols.js';
 import {
-  CEILING_PRESETS, OPENING_KINDS, newFixture, newOpening, newFurniture,
+  CEILING_PRESETS, OPENING_KINDS, newFixture, newOpening, newFurniture, newBacking,
   masuOptions, masuToWidth, confidenceOf, starterData, SNAP_MM, MASU_MM,
 } from './presets.js';
 
@@ -41,7 +41,20 @@ function track(name) {
 }
 
 /** いま選んでいる「置くもの」。null なら配置モードではない */
-let placing = null;   // 例 { kind:'fixtures', type:'outlet' } / { kind:'openings', openingKind:'window' }
+let placing = null;   // 例 { kind:'fixtures', type:'outlet' } / { kind:'openings', openingKind:'window' } / { kind:'backing' }
+
+/** パレットのボタン名がそのまま部品の種類(配列名)になるもの。家具の枠と下地 */
+const BOX_KINDS = ['furniture', 'backing'];
+
+/** パレットのボタン名 → 置くものの指定 */
+function placingFor(name) {
+  return BOX_KINDS.includes(name) ? { kind: name } : { kind: 'fixtures', type: name };
+}
+
+/** そのボタンが、いまの配置モードに対応しているか(ボタンの点灯判定) */
+function matchesPlacing(next, name) {
+  return !!next && (next.type === name || (BOX_KINDS.includes(name) && next.kind === name));
+}
 
 /** 壁の外をクリックしたときの案内を元に戻すためのタイマー */
 let hintTimer = 0;
@@ -138,10 +151,7 @@ function bindEvents() {
   document.querySelectorAll('[data-place]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const name = btn.dataset.place;
-      const already = placing && (placing.type === name
-        || (placing.kind === 'furniture' && name === 'furniture'));
-      setPlacing(already ? null
-        : (name === 'furniture' ? { kind: 'furniture' } : { kind: 'fixtures', type: name }));
+      setPlacing(matchesPlacing(placing, name) ? null : placingFor(name));
     });
   });
   el.paletteOpening.addEventListener('change', () => {
@@ -219,8 +229,7 @@ function bindNumber(node, apply) {
 function setPlacing(next) {
   placing = next;
   document.querySelectorAll('[data-place]').forEach((btn) => {
-    btn.classList.toggle('active', !!next && (next.type === btn.dataset.place
-      || (next.kind === 'furniture' && btn.dataset.place === 'furniture')));
+    btn.classList.toggle('active', matchesPlacing(next, btn.dataset.place));
   });
   if (!next || next.kind !== 'openings') el.paletteOpening.value = '';
   el.canvasPane.classList.toggle('placing', !!next);
@@ -255,7 +264,7 @@ function onCanvasPointerDown(e) {
   // 1. 置くもの選択中 → クリックした位置に置く
   if (placing) { placeElement(mm); return; }
 
-  // 2. 大きさを変えるつまみの上 → リサイズ(家具・棚の枠だけ)
+  // 2. 大きさを変えるつまみの上 → リサイズ(家具・棚の枠と下地だけ)
   const handle = e.target.closest('[data-handle]');
   if (handle) { startResize(handle.dataset.id, handle.dataset.handle, mm); return; }
 
@@ -284,12 +293,13 @@ function placeElement(mm) {
   }
   const x = snap(mm.x);
   const kind = placing.kind;
-  const id = state.nextId(kind === 'fixtures' ? 'f' : (kind === 'openings' ? 'op' : 'fur'));
+  const id = state.nextId(state.ID_PREFIX[kind]);
 
   state.update(() => {
     const w = state.getWall();
     if (kind === 'fixtures') w.fixtures.push(newFixture(id, placing.type, x, snap(mm.h)));
     else if (kind === 'openings') w.openings.push(newOpening(id, placing.openingKind, x, w.width));
+    else if (kind === 'backing') w.backing.push(newBacking(id, x, w.width));
     else w.furniture.push(newFurniture(id, x, w.width));
   });
   state.setSelectedId(id);
@@ -313,7 +323,7 @@ function addNote() {
 
 /**
  * 部品の位置(mm)を読む・書く。
- * 記号は中心、窓・ドアと家具の枠は左下が基準(設計書4-1)。
+ * 記号は中心、窓・ドア・家具の枠・下地は左下が基準(設計書4-1)。
  */
 function getPos(kind, item) {
   if (kind === 'fixtures') return { x: item.x, h: item.h };
@@ -406,17 +416,17 @@ function startLabelDrag(id, startMm) {
   window.addEventListener('pointerup', onUp);
 }
 
-/** 家具・棚の枠の大きさの最小値(mm)。これより小さくはできない */
+/** 家具・棚の枠・下地の大きさの最小値(mm)。これより小さくはできない */
 const MIN_SIZE_MM = 100;
 
 /**
- * つまみをドラッグして家具・棚の枠の大きさを変える(10mm刻み)。
+ * つまみをドラッグして家具・棚の枠・下地の大きさを変える(10mm刻み)。
  * 左下(x・下端)は動かさず、右端で幅・上端で高さを変える。
  * 正確な数値は右パネルのmm欄で直せる(ドラッグ中も右パネルの数値は連動する)。
  */
 function startResize(id, dir, startMm) {
   const found = state.findElement(id);
-  if (!found || found.kind !== 'furniture') return;
+  if (!found || !BOX_KINDS.includes(found.kind)) return;
   let moved = false;
 
   const onMove = (ev) => {

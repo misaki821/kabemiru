@@ -5,7 +5,7 @@
    ========================================================================== */
 
 import {
-  drawFixture, drawOpening, drawFurnitureBox, legendSymbol, sizeOf,
+  drawFixture, drawOpening, drawFurnitureBox, drawBackingBox, hatchDefs, legendSymbol, sizeOf,
   escapeXml, isWarn, defaultName, isSensorSwitch,
   hRefOffsetPx, hRefSuffix, hRefDimLabel,
 } from './symbols.js';
@@ -64,8 +64,8 @@ export function pxToMm(px, py) {
 export function getView() { return { ...view }; }
 
 /**
- * 窓・ドア・家具の枠のpx外形を求める(左下基準のデータ → 左上基準のpx)
- * @param {string} kind 'openings' か 'furniture'
+ * 窓・ドア・家具の枠・下地のpx外形を求める(左下基準のデータ → 左上基準のpx)
+ * @param {string} kind 'openings' / 'furniture' / 'backing'
  */
 export function elementBox(kind, el) {
   const bottom = kind === 'openings' ? el.sillHeight : el.bottom;
@@ -113,9 +113,11 @@ export function buildSvg(wall, opts = {}) {
   const height = Math.ceil(legendY + legend.height + 34);
 
   const parts = [];
+  parts.push(hatchDefs());   // 下地の斜線パターン(凡例でも使うので常に入れる)
   parts.push(`<rect x="0" y="0" width="${VIEW.w}" height="${height}" fill="#ffffff"/>`);
   parts.push(drawTitle(wall));
   parts.push(drawWallBody(wall, geo));
+  parts.push(drawBacking(wall, labels, selectedId, forExport));   // 壁の中の補強=いちばん下に描く
   parts.push(drawOpenings(wall, labels, selectedId, forExport));
   parts.push(drawFurniture(wall, labels, selectedId, forExport));
   parts.push(drawFixtures(labels, selectedId, forExport));
@@ -190,6 +192,16 @@ function drawFurniture(wall, labels, selectedId, forExport) {
     const handles = fu.id === selectedId && !forExport ? resizeHandles(fu.id, box) : '';
     const body = drawFurnitureBox(fu, box, labels.byId.get(fu.id));
     return pickable(fu.id, body, box, selectedId, forExport, handles);
+  }).join('\n');
+}
+
+/** 下地(壁の補強)。家具の枠と同じく、選んでいるあいだは大きさを変えるつまみを出す */
+function drawBacking(wall, labels, selectedId, forExport) {
+  return (wall.backing || []).map((bk) => {
+    const box = elementBox('backing', bk);
+    const handles = bk.id === selectedId && !forExport ? resizeHandles(bk.id, box) : '';
+    const body = drawBackingBox(bk, box, labels.byId.get(bk.id));
+    return pickable(bk.id, body, box, selectedId, forExport, handles);
   }).join('\n');
 }
 
@@ -283,6 +295,20 @@ function layoutLabels(wall, geo) {
     const make = (shift) => blockBox(cx, first(shift), lines, 11, 14);
     const shift = findShift(make, upShifts(), blockers);
     byId.set(fu.id, { cx, lines, baselineY: first(shift) });
+    blockers.push(grow(make(shift), 2, 0));
+  });
+
+  // --- 3'. 下地のラベル(枠の中央。記号などと重なるときは上下に逃がす) ---
+  (wall.backing || []).forEach((bk) => {
+    const box = elementBox('backing', bk);
+    const lines = bk.label ? wrapText(bk.label, 11, Math.max(box.w - 4, 180)) : [];
+    if (!lines.length) return;
+    const width = Math.max(...lines.map((l) => estimateTextWidth(l, 11))) * 1.06;
+    const cx = clampCenterX(box.x + box.w / 2, width);
+    const first = (shift) => box.y + box.h / 2 + 4 - ((lines.length - 1) * 14) / 2 + shift;
+    const make = (shift) => blockBox(cx, first(shift), lines, 11, 14);
+    const shift = findShift(make, tierShifts(), blockers);
+    byId.set(bk.id, { cx, lines, baselineY: first(shift) });
     blockers.push(grow(make(shift), 2, 0));
   });
 
@@ -524,6 +550,11 @@ function drawSelectedDims(wall, geo, selectedId) {
     const p = mmToPx(fu.x, fu.bottom);
     return drawElementDims(geo, p.x, p.y, fu.x, fu.bottom, '下端 床から');
   }
+  const bk = (wall.backing || []).find((b) => b.id === selectedId);
+  if (bk) {
+    const p = mmToPx(bk.x, bk.bottom);
+    return drawElementDims(geo, p.x, p.y, bk.x, bk.bottom, '下端 床から');
+  }
   return '';   // メモには位置が無いので寸法も無い
 }
 
@@ -599,6 +630,8 @@ function drawLegend(y, wall) {
     { kind: 'light',     text: '照明(D=ダウン/S=シーリング/P=ペンダント/B=ブラケット)' },
     { kind: 'opening',   text: '窓・ドア' },
     { kind: 'furniture', text: '家具・棚の置き予定' },
+    // 下地は使っている壁にだけ出す(使わない人の凡例を長くしないため)
+    ...((wall.backing || []).length ? [{ kind: 'backing', text: '下地(壁の中の補強板)の希望範囲' }] : []),
     // 下の6種はパレットには無い記号。その壁で使っているものだけ行を足す(設計書5-5)
     ...EXTRA_LEGEND.filter((item) => wall.fixtures.some((fx) => fx.type === item.kind)),
     { kind: 'outlet',    text: '赤い記号=⚠要営業確認(担当者への確認が必要)', warn: true },

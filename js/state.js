@@ -62,6 +62,7 @@ function fillDefaults(d) {
     w.openings  = w.openings  || [];
     w.fixtures  = w.fixtures  || [];
     w.furniture = w.furniture || [];
+    w.backing   = w.backing   || [];   // 下地(2026-08-22追加)。古いデータには無いので空で補う
     w.notes     = w.notes     || [];
     w.fixtures.forEach(migrateFixture);
   }
@@ -105,10 +106,13 @@ export function setSelectedId(id) {
 }
 
 /** 壁の中の部品リストの種類(データのフィールド名) */
-export const ELEMENT_KINDS = ['fixtures', 'openings', 'furniture', 'notes'];
+export const ELEMENT_KINDS = ['fixtures', 'openings', 'furniture', 'backing', 'notes'];
+
+/** 新しい部品のidの頭文字(種類ごと)。例: f3, op2, fur1, bk1, n4 */
+export const ID_PREFIX = { fixtures: 'f', openings: 'op', furniture: 'fur', backing: 'bk', notes: 'n' };
 
 /**
- * idから部品を探す。戻り値 { kind: 'fixtures'|'openings'|'furniture'|'notes', item: {...} }
+ * idから部品を探す。戻り値 { kind: 'fixtures'|'openings'|'furniture'|'backing'|'notes', item: {...} }
  * 見つからなければ null
  */
 export function findElement(id) {
@@ -197,7 +201,7 @@ export function addWall(room) {
       faceLabel: '', leftLabel: '', rightLabel: '',
       width: 3520, height: 2400,
       floorZones: [{ from: 0, to: 3520, level: 0, label: '床±0' }],
-      openings: [], fixtures: [], furniture: [], notes: [],
+      openings: [], fixtures: [], furniture: [], backing: [], notes: [],
     });
   });
   setCurrentWall(id);
@@ -214,7 +218,7 @@ export function duplicateWall() {
     copy.room = `${source.room}のコピー`;
     // 部品のidが元の壁と重ならないように付け直す
     for (const kind of ELEMENT_KINDS) {
-      copy[kind].forEach((el, i) => { el.id = `${id}-${kind[0]}${i + 1}`; });
+      copy[kind].forEach((el, i) => { el.id = `${id}-${ID_PREFIX[kind]}${i + 1}`; });
     }
     d.walls.push(copy);
   });

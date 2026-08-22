@@ -9,6 +9,7 @@ import * as state from './state.js';
 import {
   heightPresetsFor, confidenceOf, OPENING_KINDS, openingKindOf,
   DOOR_SWINGS, LIGHT_KINDS, SWITCH_VARIANTS, H_REFS, DEFAULT_H_REF,
+  BACKING_BANDS, backingBandTop,
 } from './presets.js';
 
 /** 「床から(mm)」が記号のどこを指すかの選択肢(設計書4-3の hRef) */
@@ -22,7 +23,8 @@ const H_REF_FIELD = {
    key   : データのどこを直すか('x' や 'attrs.earth' のように . でつなげる)
    type  : number(数値) / text(文字) / textarea(長い文字) / select(選択) /
            check(チェックボックス) / preset(高さプリセット) /
-           confidence(要営業確認) / doorSwing(ドアの開く向き)
+           confidence(要営業確認) / doorSwing(ドアの開く向き) /
+           backingBand(下地の高さ帯プリセット)
    when  : この条件を満たすときだけ表示する
    -------------------------------------------------------------------------- */
 const FIELDS = {
@@ -91,6 +93,16 @@ const FIELDS = {
     { key: 'label',  label: '名前(図に表示)', type: 'text', hint: '例: 冷蔵庫 W650×H1,820' },
     { type: 'confidence' },
   ],
+  backing: [
+    { type: 'backingBand', label: '高さ帯プリセット', hint: '選ぶと下端0・高さが入ります' },
+    { key: 'x',      label: '左から(mm)',     type: 'number' },
+    { key: 'width',  label: '幅(mm)',         type: 'number', hint: '1マス=910' },
+    { key: 'bottom', label: '床から下端(mm)', type: 'number', hint: 'テレビ用なら600〜700など' },
+    { key: 'height', label: '高さ(mm)',       type: 'number' },
+    { key: 'label',  label: '名前(図に表示)', type: 'text', hint: '例: TV壁掛け用' },
+    { key: 'note',   label: 'メモ',           type: 'textarea', hint: '用途・載せる物の重さなど' },
+    { type: 'confidence' },
+  ],
   notes: [
     { key: 'text',  label: 'メモの内容', type: 'textarea' },
     { key: 'level', label: '目立たせ方', type: 'select', options: opts(['info:ふつう', 'warning:⚠ 要確認(赤で表示)']) },
@@ -108,7 +120,7 @@ function opts(list) {
 /** パネルの見出し */
 const TITLES = {
   wall: '壁全体の設定', openings: '窓・ドア', outlet: 'コンセント', switch: 'スイッチ',
-  light: '照明', other: 'その他の部品', furniture: '家具・棚の枠', notes: 'メモ',
+  light: '照明', other: 'その他の部品', furniture: '家具・棚の枠', backing: '下地(壁の補強)', notes: 'メモ',
 };
 
 /* -------------------------------------------------------------------------- */
@@ -143,7 +155,7 @@ export function syncPanel() {
 /** 選んでいるものの種類 → パネルの種類 */
 function panelKeyOf(sel) {
   if (!sel) return 'wall';
-  if (sel.kind !== 'fixtures') return sel.kind;          // openings / furniture / notes
+  if (sel.kind !== 'fixtures') return sel.kind;          // openings / furniture / backing / notes
   return FIELDS[sel.item.type] ? sel.item.type : 'other';
 }
 
@@ -170,7 +182,7 @@ function makeField(def, key) {
     input = elFrom('<input type="checkbox">');
     wrap.append(input, elFrom(caption));
   } else {
-    if (def.type === 'select' || def.type === 'preset' || def.type === 'doorSwing') {
+    if (['select', 'preset', 'doorSwing', 'backingBand'].includes(def.type)) {
       input = document.createElement('select');
       input.innerHTML = optionsFor(def, key);
     } else if (def.type === 'textarea') {
@@ -196,6 +208,10 @@ function optionsFor(def, key) {
     const list = heightPresetsFor(key);
     return '<option value="">選ぶと高さが入ります</option>'
       + list.map((p) => `<option value="${p.id}">${p.name} 床から${p.h / 10}cm(${confText(p.confidence)})</option>`).join('');
+  }
+  if (def.type === 'backingBand') {
+    return '<option value="">選ぶと高さ帯が入ります</option>'
+      + BACKING_BANDS.map((b) => `<option value="${b.id}">${b.name}</option>`).join('');
   }
   const list = def.type === 'doorSwing' ? DOOR_SWINGS : def.options;
   return list.map((o) => `<option value="${o.value}">${o.label}</option>`).join('');
@@ -228,6 +244,10 @@ function makeConfidence() {
 function bind(input, def) {
   if (def.type === 'preset') {
     input.addEventListener('change', () => applyPreset(input.value, input));
+    return;
+  }
+  if (def.type === 'backingBand') {
+    input.addEventListener('change', () => applyBackingBand(input.value, input));
     return;
   }
   if (def.type === 'doorSwing') {
@@ -285,6 +305,21 @@ function applyPreset(presetId, input) {
   input.value = presetId;
 }
 
+/** 下地の高さ帯プリセットを当てる(設計書5-2)。下端を床(0)に揃え、上端までの高さを入れる */
+function applyBackingBand(bandId, input) {
+  const band = BACKING_BANDS.find((b) => b.id === bandId);
+  if (!band) return;
+  const top = backingBandTop(band, state.getWall().height);
+  edit(true, (item) => { item.bottom = 0; item.height = top; });
+  input.value = bandId;
+}
+
+/** いまの下端・高さに一致する高さ帯プリセット(無ければ undefined) */
+function backingBandOf(item) {
+  const wallH = state.getWall().height;
+  return BACKING_BANDS.find((b) => item.bottom === 0 && item.height === backingBandTop(b, wallH));
+}
+
 /** 窓・ドアの種類を変えたら、その種類のパネル構成(FIX+ドアなど)に合わせる */
 function applyOpeningKind(item) {
   const def = openingKindOf(item.kind);
@@ -314,6 +349,11 @@ function fill(key, target) {
     }
     if (name === 'preset') {
       const hit = heightPresetsFor(key).find((p) => p.h === target.h);
+      input.value = hit ? hit.id : '';
+      return;
+    }
+    if (name === 'backingBand') {
+      const hit = backingBandOf(target);
       input.value = hit ? hit.id : '';
       return;
     }

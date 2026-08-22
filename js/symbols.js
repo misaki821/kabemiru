@@ -260,6 +260,51 @@ export function drawFurnitureBox(fu, box, label) {
 }
 
 /* ==========================================================================
+   下地(backing) — 斜線(ハッチング)で塗った四角+ラベル(2026-08-22追加)
+   ほかの部品の下に描くので、塗りは薄めにして上に置いた記号が読めるようにする。
+   ========================================================================== */
+
+/** 斜線パターンの色(ふつう/要営業確認) */
+const HATCH_COLOR = '#9aa4ad';
+const HATCH_COLOR_WARN = '#e08c8c';
+
+/**
+ * 斜線パターンの定義。SVGの先頭に1回だけ入れる(render.js)。
+ * fill="url(#kb-hatch)" のように指定すると、その四角が斜線で塗られる。
+ */
+export function hatchDefs() {
+  const pattern = (id, color) =>
+    `<pattern id="${id}" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)">`
+    + `<line x1="0" y1="0" x2="0" y2="8" stroke="${color}" stroke-width="1.2"/></pattern>`;
+  return `<defs>${pattern('kb-hatch', HATCH_COLOR)}${pattern('kb-hatch-warn', HATCH_COLOR_WARN)}</defs>`;
+}
+
+/**
+ * @param {object} label ラベルの置き場所 { cx, lines, baselineY }(render.jsのlayoutLabelsが決める)。
+ *                       省略すると枠の中央に1行で描く。
+ */
+export function drawBackingBox(bk, box, label) {
+  const warn = isWarn(bk);
+  const color = warn ? COLOR_WARN : '#555';
+  let svg = `<rect x="${r(box.x)}" y="${r(box.y)}" width="${r(box.w)}" height="${r(box.h)}" `
+          + `fill="url(#${warn ? 'kb-hatch-warn' : 'kb-hatch'})" stroke="${color}" stroke-width="1.2"/>`;
+  if (label) {
+    label.lines.forEach((line, i) => {
+      svg += textHalo(label.cx, label.baselineY + i * 14, escapeXml(line), 11, color);
+    });
+  } else if (bk.label) {
+    svg += textHalo(box.x + box.w / 2, box.y + box.h / 2 + 4, escapeXml(bk.label), 11, color);
+  }
+  return svg;
+}
+
+/** 白い縁取り付きの文字(斜線の上でも読めるようにする) */
+function textHalo(x, y, body, size, color) {
+  return `<text x="${r(x)}" y="${r(y)}" font-size="${size}" fill="${color}" text-anchor="middle" `
+       + `paint-order="stroke" stroke="#ffffff" stroke-width="3" stroke-linejoin="round">${body}</text>`;
+}
+
+/* ==========================================================================
    凡例用の小さい絵(設計書5-5「凡例を必ず含める」)
    ========================================================================== */
 
@@ -279,6 +324,7 @@ export function legendSymbol(kind, cx, cy, warn = false) {
   }[kind];
   if (sample) return drawFixture({ attrs: {}, ...sample, confidence: conf }, cx, cy).svg;
   if (kind === 'opening') return box4({ x: cx - 13, y: cy - 10, w: 26, h: 20 }, COLOR_GLASS, '#222', 1.4);
+  if (kind === 'backing') return box4({ x: cx - 13, y: cy - 10, w: 26, h: 20 }, 'url(#kb-hatch)', '#555', 1.2);
   // 家具・棚の枠
   return `<rect x="${r(cx - 13)}" y="${r(cy - 10)}" width="26" height="20" fill="none" `
        + `stroke="#333" stroke-width="1.3" stroke-dasharray="4 3"/>`;
@@ -308,6 +354,7 @@ export function defaultName(el, kind) {
   }
   if (kind === 'openings')  return '窓・ドア';
   if (kind === 'furniture') return '家具・棚の枠';
+  if (kind === 'backing')   return '下地';
   return 'メモ';
 }
 
